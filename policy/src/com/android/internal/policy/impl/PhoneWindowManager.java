@@ -166,6 +166,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.List;
+import java.util.ArrayList;
 
 /**
  * WindowManagerPolicy implementation for the Android phone UI.  This
