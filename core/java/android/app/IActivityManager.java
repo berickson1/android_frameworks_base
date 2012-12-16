@@ -665,37 +665,16 @@ public interface IActivityManager extends IInterface {
    /**
      * Author: Onskreen
      * Date: 22/02/2011
+     * Modified: 12/15/2012
+     * Modified by:Brent Erickson
      *
      * Cornerstone specific transactions
+     * Updated constants to be outside of the range of
+     * newly defined constants from Android Jelly Bean
      */
-    int CORNERSTONE_STATE_TRANSACTION = IBinder.FIRST_CALL_TRANSACTION+141;
-    /**
-     * Author: Onskreen
-     * Date: 28/02/2011
-     *
-     * Cornerstone specific transactions
-     */
-    int CORNERSTONE_MANAGER_TRANSACTION = IBinder.FIRST_CALL_TRANSACTION+142;
-    /**
-     * Author: Onskreen
-     * Date: 28/02/2011
-     *
-     * Cornerstone specific transactions
-     */
-    int CORNERSTONE_MANAGER_BROADCAST_TRANSACTION = IBinder.FIRST_CALL_TRANSACTION+143;
-    /**
-     * Author: Onskreen
-     * Date: 08/03/2011
-     *
-     * Cornerstone specific transactions
-     */
-    int START_CORNERSTONE_APP_TRANSACTION = IBinder.FIRST_CALL_TRANSACTION+144;
-
-    /**
-     * Author: Onskreen
-     * Date: 11/04/2011
-     *
-     * Cornerstone specific transactions
-     */
-    int SET_CORNERSTONE_FOCUSED_APP_TRANSACTION = IBinder.FIRST_CALL_TRANSACTION+145;
+    int CORNERSTONE_STATE_TRANSACTION = IBinder.FIRST_CALL_TRANSACTION+160;
+    int CORNERSTONE_MANAGER_TRANSACTION = IBinder.FIRST_CALL_TRANSACTION+161;
+    int CORNERSTONE_MANAGER_BROADCAST_TRANSACTION = IBinder.FIRST_CALL_TRANSACTION+162;
+    int START_CORNERSTONE_APP_TRANSACTION = IBinder.FIRST_CALL_TRANSACTION+163;
+    int SET_CORNERSTONE_FOCUSED_APP_TRANSACTION = IBinder.FIRST_CALL_TRANSACTION+164;
 }
