@@ -382,6 +382,25 @@ final class WindowState implements WindowManagerPolicy.WindowState {
         final int pw = container.right - container.left;
         final int ph = container.bottom - container.top;
 
+	/**
+	 * Author: Onskreen
+	 * Date: 08/04/2011
+	 *
+	 * This block commented out.
+	 * Compatibility mode is not yet fully supported. It causes issues on the
+	 * Viewsonic. Until we fully evaluate this feature, we are
+	 * laying out the same regardless of compatibility mode being set or not
+	 * by the WindowState. Assumedly, This will have to be reverted when we fully
+	 * support compatibility mode.
+	 *
+	 */
+	/*if ((mAttrs.flags & FLAG_COMPATIBLE_WINDOW) != 0) {
+		container.intersect(mCompatibleScreenFrame);
+		if ((mAttrs.flags & FLAG_LAYOUT_NO_LIMITS) == 0) {
+		    display.intersect(mCompatibleScreenFrame);
+		}
+	}*/
+	
         int w,h;
         if ((mAttrs.flags & WindowManager.LayoutParams.FLAG_SCALED) != 0) {
             if (mAttrs.width < 0) {
@@ -414,7 +433,30 @@ final class WindowState implements WindowManagerPolicy.WindowState {
                 h = mRequestedHeight;
             }
         }
-
+        
+        /**
+	 * Author: Onskreen
+	 * Date: 03/08/2011
+	 *
+	 * When width(w) and height(h) of the window frame exceeds the container rect's
+	 * width(pw) and height(ph), we should set the width(w) and height(h) of the window
+	 * frame to the actual container rect. It's been exprienced that when apps like YouTube
+	 * runs in to portrait mode in either cs panels, it renders outside of its layout
+	 * rect and to overcome that issue, we're setting the width of frame to its container
+	 * rect's width. This solution renders the Youtube app within its layout rect but for
+	 * some unknown reason when video is playing, it doesn't render by covering the width
+	 * of the cs panel window.
+	 */
+	if(w > pw && h > ph){
+		w = pw;
+		//h = ph;
+		if(mAttrs.x < 0){
+		    mAttrs.x = 0;
+		}
+		mRequestedWidth = w;
+	}
+	
+	
         if (!mParentFrame.equals(pf)) {
             //Slog.i(TAG, "Window " + this + " content frame from " + mParentFrame
             //        + " to " + pf);
@@ -457,6 +499,39 @@ final class WindowState implements WindowManagerPolicy.WindowState {
 
         // Now make sure the window fits in the overall display.
         Gravity.applyDisplay(mAttrs.gravity, df, frame);
+        
+        /**
+         * Author: Onskreen
+         * Date: 16/12/2011
+         *
+         * When user launches actionbar menu in either cs panels,
+         * then its window panel's mFrame was set or calculated
+         * outside the total screen area after the Gravity applied
+         * by the above code. This can be resolved by setting the
+         * frame rect to fit in to its container rect.
+         */
+        if(this.mAppToken != null) {
+			WindowPanel wp = mService.findWindowPanel(this.mAppToken.token);
+			if(wp!=null) {
+				if(wp.isCornerstonePanel() && mAttrs.type == WindowManager.LayoutParams.TYPE_APPLICATION_PANEL
+					&& frame.left > container.left) {
+					frame.left = container.right - w;
+					frame.right = container.right;
+					if(frame.bottom > container.bottom) {
+						frame.top = container.top + 44;
+						int diff = 0;
+						if(mRequestedHeight > ph) {
+							diff = mRequestedHeight - ph;
+						} else {
+							diff = ph - mRequestedHeight;
+						}
+						frame.bottom = container.bottom + diff + 44;
+					}
+					//mRequestedHeight = frame.bottom - frame.top;
+					//h = mRequestedHeight;
+				}
+			}
+		}
 
         // Make sure the system, content and visible frames are inside of the
         // final window frame.

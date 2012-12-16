@@ -539,6 +539,17 @@ public class PhoneWindowManager implements WindowManagerPolicy {
     ShortcutManager mShortcutManager;
     PowerManager.WakeLock mBroadcastWakeLock;
     boolean mHavePendingMediaKeyRepeatWithWakeLock;
+    
+    /**
+     * Author: Onskreen
+     * Date: 14/04/2011
+     *
+     * In the case of virtual keyboard, these Window shifting flags are used.
+     * Including the windows which are shifted currently and the amount the window
+     * was shifted. This policy tracks how much and when to shift the windows
+     */
+    ArrayList<WindowState> mWindowsShifted = new ArrayList<WindowState>();
+    int mWindowShiftAmount;
 
     // Fallback actions by key code.
     private final SparseArray<KeyCharacterMap.FallbackAction> mFallbackActions =
@@ -548,7 +559,6 @@ public class PhoneWindowManager implements WindowManagerPolicy {
     private static final int MSG_DISABLE_POINTER_LOCATION = 2;
     private static final int MSG_DISPATCH_MEDIA_KEY_WITH_WAKE_LOCK = 3;
     private static final int MSG_DISPATCH_MEDIA_KEY_REPEAT_WITH_WAKE_LOCK = 4;
-    private static final int MSG_DISPATCH_VOLKEY_WITH_WAKE_LOCK = 5;
 
     private class PolicyHandler extends Handler {
         @Override
@@ -566,11 +576,7 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                 case MSG_DISPATCH_MEDIA_KEY_REPEAT_WITH_WAKE_LOCK:
                     dispatchMediaKeyRepeatWithWakeLock((KeyEvent)msg.obj);
                     break;
-                case MSG_DISPATCH_VOLKEY_WITH_WAKE_LOCK:
                     mIsLongPress = true;
-                    dispatchMediaKeyWithWakeLockToAudioService((KeyEvent)msg.obj);
-                    dispatchMediaKeyWithWakeLockToAudioService(KeyEvent.changeAction((KeyEvent)msg.obj, KeyEvent.ACTION_UP));
-                    break;
             }
         }
     }
@@ -773,6 +779,53 @@ public class PhoneWindowManager implements WindowManagerPolicy {
         if (mPowerKeyTriggered) {
             mPendingPowerKeyUpCanceled = true;
         }
+    }
+
+    /**
+     * When a volumeup-key longpress expires, skip songs based on key press
+     */
+    Runnable mVolumeUpLongPress = new Runnable() {
+        public void run() {
+            // set the long press flag to true
+            mIsLongPress = true;
+
+            // Shamelessly copied from Kmobs LockScreen controls, works for Pandora, etc...
+            sendMediaButtonEvent(KeyEvent.KEYCODE_MEDIA_NEXT);
+        };
+    };
+
+    /**
+     * When a volumedown-key longpress expires, skip songs based on key press
+     */
+    Runnable mVolumeDownLongPress = new Runnable() {
+        public void run() {
+            // set the long press flag to true
+            mIsLongPress = true;
+
+            // Shamelessly copied from Kmobs LockScreen controls, works for Pandora, etc...
+            sendMediaButtonEvent(KeyEvent.KEYCODE_MEDIA_PREVIOUS);
+        };
+    };
+
+    private void sendMediaButtonEvent(int code) {
+        long eventtime = SystemClock.uptimeMillis();
+        Intent keyIntent = new Intent(Intent.ACTION_MEDIA_BUTTON, null);
+        KeyEvent keyEvent = new KeyEvent(eventtime, eventtime, KeyEvent.ACTION_DOWN, code, 0);
+        keyIntent.putExtra(Intent.EXTRA_KEY_EVENT, keyEvent);
+        mContext.sendOrderedBroadcast(keyIntent, null);
+        keyEvent = KeyEvent.changeAction(keyEvent, KeyEvent.ACTION_UP);
+        keyIntent.putExtra(Intent.EXTRA_KEY_EVENT, keyEvent);
+        mContext.sendOrderedBroadcast(keyIntent, null);
+    }
+
+    void handleVolumeLongPress(int keycode) {
+        mHandler.postDelayed(keycode == KeyEvent.KEYCODE_VOLUME_UP ? mVolumeUpLongPress :
+            mVolumeDownLongPress, ViewConfiguration.getLongPressTimeout());
+    }
+
+    void handleVolumeLongPressAbort() {
+        mHandler.removeCallbacks(mVolumeUpLongPress);
+        mHandler.removeCallbacks(mVolumeDownLongPress);
     }
 
     private void interceptScreenshotChord() {
@@ -1597,6 +1650,16 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                 attrs.flags &= ~WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH;
                 break;
         }
+        
+        /**
+         * Author: Onskreen
+         * Date: 24/02/2011
+         *
+         * Removes the FULLSCREEN flag from the app to render it within CS panel.
+         */
+        if ((attrs.flags & WindowManager.LayoutParams.FLAG_FULLSCREEN) != 0) {
+            attrs.flags ^= WindowManager.LayoutParams.FLAG_FULLSCREEN;
+        }
     }
     
     void readLidState() {
@@ -2210,12 +2273,23 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                         return -1;
                     }
                 }
-            }
             if (down) {
                 if (!mRecentAppsPreloaded && mLongPressOnHomeBehavior == KEY_ACTION_APP_SWITCH) {
                     preloadRecentApps();
                 }
                 if (repeatCount == 0) {
+                
+                /**
+		        * Author: Onskreen
+		        * Date: 31/05/2011
+		        *
+		        * If the dialog is present, first kill/dismiss the dialog
+		        * and then launch the HOME app or recent app dialog.
+		        */
+		        if(win.isDialog()){
+		           win.removeWindowState();
+		        }
+		        
                     mHomePressed = true;
                 } else if (longPress) {
                     if (!keyguardOn && mLongPressOnHomeBehavior != KEY_ACTION_NOTHING) {
@@ -3146,6 +3220,18 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                         vf.top = mCurTop;
                         vf.right = mCurRight;
                         vf.bottom = mCurBottom;
+                        
+                        /**
+						 * Author: Onskreen
+						 * Date: 18/01/2011
+						 *
+						 * Adjusts the size of pf, df, cf, vf rects.
+						 */
+						if (attrs.type != TYPE_STATUS_BAR_PANEL
+			                            || attrs.type != TYPE_STATUS_BAR_SUB_PANEL) {
+							setWindowInFrame(win, attrs, pf, df, cf, vf);
+						}
+						
                     } else {
                         vf.set(cf);
                     }
@@ -3321,6 +3407,99 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                 + mDockBottom + " mContentBottom="
                 + mContentBottom + " mCurBottom=" + mCurBottom);
     }
+    
+    /**
+     * Author: Onskreen
+	 * Date: 05/04/2011
+     *
+     * This is a shortcut to tell if the IME is visible on the screen without referencing the mFrame of the WindowState
+     * as that value may get shifted while being layed out. Previously we were using the interesection of the mFrame with
+     * the mContentBottom.
+     */
+    private boolean isKeyboardVisible() {
+		if(mContentBottom != mRestrictedScreenHeight) {
+			return true;
+		} else {
+			return false;
+		}
+    }
+
+    /**
+     * Author: Onskreen
+     * Date: 16/06/2011
+     *
+     * Utility method for setting the layout rects for obstructed cs window.
+     */
+    private void setObstructedWindowInFrame(WindowState win, WindowManager.LayoutParams attrs, Rect pf, Rect df, Rect cf, Rect vf, Rect desiredRect){
+        /**
+         * Author: Onskreen
+         * Date: 05/04/2011
+         *
+         * Having the SOFT_INPUT_ADJUST_RESIZE flag set indicates that the windowstate should be
+         * manipulated in the presence of the keyboard. For Cornerstone, those panels that are
+         * unduly obstructed by the presence of the keyboard are also manipulated regardless
+         * of the flag.
+         */
+       if(((attrs.softInputMode & SOFT_INPUT_MASK_ADJUST) == SOFT_INPUT_ADJUST_RESIZE) ||
+               win.isObstructedByKeyboard()) {
+           //Indicates the V Keyboard is on the screen, if mContentBottom has been reset
+           //and our desired rect will overlap it
+//           if(desiredRect.bottom > mContentBottom) {
+			if(isKeyboardVisible()) {
+               //If the entire rect is off the screen, it indicates it is not actually visible. This can
+               //be the case for a cornerstone panel when the cornerstone is RUNNING_CLOSED.
+               if(desiredRect.top > mUnrestrictedScreenHeight ||                   //Orientation: Portrait, CS State: Closed
+                       desiredRect.left > mUnrestrictedScreenWidth)   {           //Orientation: Landscape, CS State: Closed
+                   if (DEBUG_LAYOUT) Log.v(TAG, "\tAction: Ignore, win is not visible anyway");
+                   cf.bottom = desiredRect.bottom;
+                   vf.bottom = desiredRect.bottom;
+               } else if(win.isObstructedByKeyboard()) {
+                   //Try to shift the window up on the screen to be fully visible
+
+                   //Window already shifted
+                   if(mWindowsShifted.contains(win)) {
+                       if (DEBUG_LAYOUT) Log.v(TAG, "\tAction: Win already shifted");
+
+                       if(pf.bottom!=mContentBottom) {
+                           int modifiedTop = desiredRect.top - mWindowShiftAmount;
+                           pf.top = df.top = cf.top = vf.top = modifiedTop;
+                           pf.bottom = df.bottom = mContentBottom;
+                           cf.bottom = mContentBottom;
+                           vf.bottom = mCurBottom;
+                       }
+                   } else {
+                       mWindowsShifted.add(win);
+                       mWindowShiftAmount = desiredRect.bottom - mContentBottom;
+                       if (DEBUG_LAYOUT) Log.v(TAG, "\tAction: Shift up " + mWindowShiftAmount + " pixels");
+                       int modifiedTop = desiredRect.top - mWindowShiftAmount;
+                       pf.top = df.top = cf.top = vf.top = modifiedTop;
+                       pf.bottom = df.bottom = mContentBottom;
+                       cf.bottom = mContentBottom;
+                       vf.bottom = mCurBottom;
+                   }
+               } else {
+                   //Squeeze the window in the visible area above the keyboard
+                   if (DEBUG_LAYOUT) Log.v(TAG, "\tAction: Squeeze into visible rect above keyboard");
+                   cf.bottom = mContentBottom;
+                   vf.bottom = mCurBottom;
+               }
+           } else {
+               //Layout as regular
+               if (DEBUG_LAYOUT) Log.v(TAG, "IME: Not Visible\tTask: Unshift Win: " + win);
+               if(mWindowsShifted.contains(win)) {
+                  if (DEBUG_LAYOUT) Log.v(TAG, "\tAction: Shift down " + mWindowShiftAmount + " pixels");
+                  mWindowsShifted.clear();
+                  pf.top = df.top = cf.top = vf.top = desiredRect.top + mWindowShiftAmount;
+                  vf.bottom = cf.bottom = desiredRect.bottom+ mWindowShiftAmount;
+                  pf.bottom = df.bottom = desiredRect.bottom+ mWindowShiftAmount;
+               } else {
+                   if (DEBUG_LAYOUT) Log.v(TAG, "\tAction: Ignore, not currently shifted");
+                   vf.bottom = cf.bottom = desiredRect.bottom;
+                   pf.bottom = df.bottom = desiredRect.bottom;
+               }
+           }
+       }
+    }
 
     /** {@inheritDoc} */
     @Override
@@ -3431,6 +3610,16 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                 }
                 topIsFullscreen = (lp.flags & WindowManager.LayoutParams.FLAG_FULLSCREEN) != 0
                         || (mLastSystemUiFlags & View.SYSTEM_UI_FLAG_FULLSCREEN) != 0;
+                        
+                 /**
+                 * Author: Onskreen
+                 * Date: 24/02/2011
+                 *
+                 * Never hide the status bar to ensure that app always renders within
+                 * the CS panel.
+                 */
+                topIsFullscreen = false;
+                
                 // The subtle difference between the window for mTopFullscreenOpaqueWindowState
                 // and mTopIsFullscreen is that that mTopIsFullscreen is set only if the window
                 // has the FLAG_FULLSCREEN set.  Not sure if there is another way that to be the
@@ -3901,16 +4090,11 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                 if (isMusicActive() && (result & ACTION_PASS_TO_USER) == 0) {
                     if (mVolBtnMusicControls && down && (keyCode != KeyEvent.KEYCODE_VOLUME_MUTE)) {
                         mIsLongPress = false;
-                        int newKeyCode = event.getKeyCode() == KeyEvent.KEYCODE_VOLUME_UP ?
-                                KeyEvent.KEYCODE_MEDIA_NEXT : KeyEvent.KEYCODE_MEDIA_PREVIOUS;
-                        Message msg = mHandler.obtainMessage(MSG_DISPATCH_VOLKEY_WITH_WAKE_LOCK,
-                                new KeyEvent(event.getDownTime(), event.getEventTime(), event.getAction(), newKeyCode, 0));
-                        msg.setAsynchronous(true);
-                        mHandler.sendMessageDelayed(msg, ViewConfiguration.getLongPressTimeout());
+                        handleVolumeLongPress(keyCode);
                         break;
                     } else {
                         if (mVolBtnMusicControls && !down) {
-                            mHandler.removeMessages(MSG_DISPATCH_VOLKEY_WITH_WAKE_LOCK);
+                            handleVolumeLongPressAbort();
                             if (mIsLongPress) {
                                 break;
                             }

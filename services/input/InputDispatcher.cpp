@@ -1101,6 +1101,38 @@ Unresponsive:
     return injectionResult;
 }
 
+/**
+ * Author: Onskreen
+ * Date: 25/05/2011
+ *
+ * Determines if the passed window is a dialog
+ */
+bool InputDispatcher::isDialog(const InputWindowInfo* window){
+	int32_t type = window->layoutParamsType;
+	int32_t flags = window->layoutParamsFlags;
+	/**
+	 * Author: Onskreen
+	 * Date: 20/12/2011
+	 *
+	 * TYPE_CHANGED is no longer a defined Window type
+	 */
+	if((type == InputWindowInfo::TYPE_APPLICATION_ATTACHED_DIALOG) ||
+	   (type == InputWindowInfo::TYPE_KEYGUARD_DIALOG) ||
+	   (type == InputWindowInfo::TYPE_TOAST) ||
+	   (type == InputWindowInfo::TYPE_SYSTEM_ERROR) ||
+	   (type == InputWindowInfo::TYPE_SYSTEM_ALERT) ||
+	   /*(type == InputWindowInfo::TYPE_SEARCH_BAR) ||
+	   (type == InputWindowInfo::TYPE_STATUS_BAR) || */
+	   (type == InputWindowInfo::TYPE_SYSTEM_DIALOG) ||
+	   /*(type == InputWindowInfo::TYPE_CHANGED) || */
+	   (((flags == (InputWindowInfo::FLAG_ALT_FOCUSABLE_IM
+                            | InputWindowInfo::FLAG_DIM_BEHIND)))
+		&& (type == InputWindowInfo::TYPE_BASE_APPLICATION))){
+		return true;
+	}
+	return false;
+}
+
 int32_t InputDispatcher::findTouchedWindowTargetsLocked(nsecs_t currentTime,
         const MotionEntry* entry, Vector<InputTarget>& inputTargets, nsecs_t* nextWakeupTime,
         bool* outConflictingPointerActions) {
@@ -1192,6 +1224,13 @@ int32_t InputDispatcher::findTouchedWindowTargetsLocked(nsecs_t currentTime,
         sp<InputWindowHandle> newTouchedWindowHandle;
         sp<InputWindowHandle> topErrorWindowHandle;
         bool isTouchModal = false;
+        /**
+         * Author: Brent Erickson
+         * Date: 12/14/2012
+         *
+         * Variable Declaration for the loop
+         */
+        String8 subStr;
 
         // Traverse windows from front to back to find touched window and outside targets.
         size_t numWindows = mWindowHandles.size();
@@ -1213,13 +1252,60 @@ int32_t InputDispatcher::findTouchedWindowTargetsLocked(nsecs_t currentTime,
                 if (! (flags & InputWindowInfo::FLAG_NOT_TOUCHABLE)) {
                     isTouchModal = (flags & (InputWindowInfo::FLAG_NOT_FOCUSABLE
                             | InputWindowInfo::FLAG_NOT_TOUCH_MODAL)) == 0;
-                    if (isTouchModal || windowInfo->touchableRegionContainsPoint(x, y)) {
+                            
+                            
+                            
+                    /**
+		             * Author: Onskreen
+		             * Date: 17/02/2011
+		             * Modified by: Brent Erickson
+		             * Modified: 12/14/2012
+		             *
+		             * Determines the interesting target window where user has initiated
+		             * the pointer event and sets the correct mFocusedApplication,
+		             * mFocusedWindow variables.
+		             */
+                    //if (isTouchModal || windowInfo->touchableRegionContainsPoint(x, y)) {
+                    //    if (! screenWasOff
+                    //            || (flags & InputWindowInfo::FLAG_TOUCHABLE_WHEN_WAKING)) {
+                    //        newTouchedWindowHandle = windowHandle;
+                    //    }
+                    //    break; // found touched window, exit window loop
+                    //}
+                    #if DEBUG_USER_INPUT
+			        LOGD("Window->x : %d", x);
+			        LOGD("Window->y : %d", y);
+			        LOGD("Window.frameLeft-> %d", windowInfo->frameLeft);
+			        LOGD("Window.frameTop-> %d", windowInfo->frameTop);
+			        LOGD("Window.frameRight-> %d", windowInfo->frameRight);
+			        LOGD("Window.frameBottom-> %d", windowInfo->frameBottom);
+			        LOGD("Window.visibleFrameLeft-> %d", windowInfo->visibleFrameLeft);
+			        LOGD("Window.visibleFrameTop-> %d", windowInfo->visibleFrameTop);
+			        LOGD("Window.visibleFrameRight-> %d", windowInfo->visibleFrameRight);
+			        LOGD("Window.visibleFrameBottom-> %d", windowInfo->visibleFrameBottom);
+			        LOGD("Window.touchableAreaLeft-> %d", windowInfo->touchableAreaLeft);
+			        LOGD("Window.touchableAreaTop-> %d", windowInfo->touchableAreaTop);
+			        LOGD("Window.touchableAreaRight-> %d", windowInfo->touchableAreaRight);
+			        LOGD("Window.touchableAreaBottom-> %d", windowInfo->touchableAreaBottom);
+			        LOGD("Window->isTouchModal %d", isTouchModal);
+			        LOGD("window->touchableAreaContainsPoint(x, y) %d", windowInfo->touchableAreaContainsPoint(x, y));
+		            #endif
+
+		            subStr = getNonAppSubStr(windowInfo->name.string());
+		            #if DEBUG_USER_INPUT
+			        LOGD("Non app sub string is: %s", subStr.string());
+		            #endif
+
+		            if (windowInfo->touchableRegionContainsPoint(x, y) && 
+		                    (isTouchModal || subStr == "StatusBar" || 
+		                    subStr == "StatusBarExpanded" || subStr == "InputMethod")) {
+                        //if (isTouchModal || windowInfo->touchableRegionContainsPoint(x, y)) {
                         if (! screenWasOff
                                 || (flags & InputWindowInfo::FLAG_TOUCHABLE_WHEN_WAKING)) {
-                            newTouchedWindowHandle = windowHandle;
+	            	        newTouchedWindowHandle = windowHandle;
                         }
                         break; // found touched window, exit window loop
-                    }
+                    }             
                 }
 
                 if (maskedAction == AMOTION_EVENT_ACTION_DOWN
@@ -2341,6 +2427,37 @@ void InputDispatcher::notifyConfigurationChanged(const NotifyConfigurationChange
     if (needWake) {
         mLooper->wake();
     }
+}
+
+/**
+ * Author: Onskreen
+ * Date: 17/02/2011
+ *
+ * Utility function returning the sub string from InputWindow.name string.
+ */
+String8 InputDispatcher::getSubStr(const char* src) {
+    String8 subStr;
+    char* str1;
+    str1 = strchr(src, ' ');
+    str1 = strtok(str1, "/");
+    subStr.append(str1);
+    return subStr;
+}
+
+/**
+ * Author: Onskreen
+ * Date: 18/02/2011
+ *
+ * Utility function returning the sub string from non-app (dialogs, virtual keyboard, statusbar etc.)
+ * InputWindow.name string.
+ */
+String8 InputDispatcher::getNonAppSubStr(const char* src) {
+    String8 subStr;
+    char* str1;
+    str1 = strchr(src, ' ');
+    str1 = strtok(str1, " ");
+    subStr.append(str1);
+    return subStr;
 }
 
 void InputDispatcher::notifyKey(const NotifyKeyArgs* args) {

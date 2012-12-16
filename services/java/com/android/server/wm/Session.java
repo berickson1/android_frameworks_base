@@ -445,6 +445,19 @@ final class Session extends IWindowSession.Stub
             }
         }
     }
+    
+   /**
+    * Author: Onskreen
+    * Date: 14/02/2011
+    *
+    * Trigger a move of all the contents of a WindowPanel to the top of the z-order. Also triggers move
+    * of all tokens/window panels that are in the same panel to the top. This is to ensure that the z-order
+    * contains all the app tokesn in order from the same panel at the top.
+    *
+    */
+    public void handleFocusChange(IBinder token) {
+	  mService.handleFocusChangeLocked(token);
+    }
 
     void windowAddedLocked() {
         if (mSurfaceSession == null) {

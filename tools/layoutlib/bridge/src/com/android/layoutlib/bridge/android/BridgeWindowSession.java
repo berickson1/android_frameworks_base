@@ -199,4 +199,15 @@ public final class BridgeWindowSession implements IWindowSession {
     public void onRectangleOnScreenRequested(IBinder window, Rect rectangle, boolean immediate) {
         // pass for now.
     }
+    
+    /**
+     * Author: Onskreen
+     * Date: 17/02/2011
+     *
+     * Notifies the WindowManagerService to reshuffle its z-order to dispatch
+     * the user input event to the newly focused window.
+     */
+    public void handleFocusChange(IBinder token){
+        // pass for now.
+    }
 }

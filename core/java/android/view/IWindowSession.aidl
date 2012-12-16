@@ -185,4 +185,13 @@ interface IWindowSession {
      * Notifies that a rectangle on the screen has been requested.
      */
     void onRectangleOnScreenRequested(IBinder token, in Rect rectangle, boolean immediate);
+
+    /**
+     * Author: Onskreen
+     * Date: 17/02/2011
+     *
+     * Notifies the WindowManagerService to reshuffle its z-order to dispatch the user
+     * input event to the newly focused window.
+     */
+    void handleFocusChange(IBinder token);
 }
