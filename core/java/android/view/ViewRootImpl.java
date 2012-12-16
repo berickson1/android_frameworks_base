@@ -3173,7 +3173,7 @@ public final class ViewRootImpl implements ViewParent,
                 try{
 				    //Only send Down Event. Touch will focus the window, rest will
 				    //be handled by the view/window.
-				    if(q.mEvent.getAction() == MotionEvent.ACTION_DOWN) {
+				    if(q.mEvent instanceof MotionEvent && ((MotionEvent)q.mEvent).getAction() == MotionEvent.ACTION_DOWN) {
 					    //If the window of this view already has the focus, no need
 					    //to trigger the java side processing of managing this event
 					    if(!mView.hasWindowFocus()) {
