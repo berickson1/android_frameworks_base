@@ -2226,6 +2226,7 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                         return -1;
                     }
                 }
+            }
             if (down) {
                 if (!mRecentAppsPreloaded && mLongPressOnHomeBehavior == KEY_ACTION_APP_SWITCH) {
                     preloadRecentApps();
