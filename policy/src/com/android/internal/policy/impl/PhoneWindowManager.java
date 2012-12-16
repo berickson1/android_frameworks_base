@@ -781,53 +781,6 @@ public class PhoneWindowManager implements WindowManagerPolicy {
         }
     }
 
-    /**
-     * When a volumeup-key longpress expires, skip songs based on key press
-     */
-    Runnable mVolumeUpLongPress = new Runnable() {
-        public void run() {
-            // set the long press flag to true
-            mIsLongPress = true;
-
-            // Shamelessly copied from Kmobs LockScreen controls, works for Pandora, etc...
-            sendMediaButtonEvent(KeyEvent.KEYCODE_MEDIA_NEXT);
-        };
-    };
-
-    /**
-     * When a volumedown-key longpress expires, skip songs based on key press
-     */
-    Runnable mVolumeDownLongPress = new Runnable() {
-        public void run() {
-            // set the long press flag to true
-            mIsLongPress = true;
-
-            // Shamelessly copied from Kmobs LockScreen controls, works for Pandora, etc...
-            sendMediaButtonEvent(KeyEvent.KEYCODE_MEDIA_PREVIOUS);
-        };
-    };
-
-    private void sendMediaButtonEvent(int code) {
-        long eventtime = SystemClock.uptimeMillis();
-        Intent keyIntent = new Intent(Intent.ACTION_MEDIA_BUTTON, null);
-        KeyEvent keyEvent = new KeyEvent(eventtime, eventtime, KeyEvent.ACTION_DOWN, code, 0);
-        keyIntent.putExtra(Intent.EXTRA_KEY_EVENT, keyEvent);
-        mContext.sendOrderedBroadcast(keyIntent, null);
-        keyEvent = KeyEvent.changeAction(keyEvent, KeyEvent.ACTION_UP);
-        keyIntent.putExtra(Intent.EXTRA_KEY_EVENT, keyEvent);
-        mContext.sendOrderedBroadcast(keyIntent, null);
-    }
-
-    void handleVolumeLongPress(int keycode) {
-        mHandler.postDelayed(keycode == KeyEvent.KEYCODE_VOLUME_UP ? mVolumeUpLongPress :
-            mVolumeDownLongPress, ViewConfiguration.getLongPressTimeout());
-    }
-
-    void handleVolumeLongPressAbort() {
-        mHandler.removeCallbacks(mVolumeUpLongPress);
-        mHandler.removeCallbacks(mVolumeDownLongPress);
-    }
-
     private void interceptScreenshotChord() {
         if (mScreenshotChordEnabled
                 && mVolumeDownKeyTriggered && mPowerKeyTriggered && !mVolumeUpKeyTriggered) {
@@ -2279,16 +2232,16 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                 }
                 if (repeatCount == 0) {
                 
-                /**
-		        * Author: Onskreen
-		        * Date: 31/05/2011
-		        *
-		        * If the dialog is present, first kill/dismiss the dialog
-		        * and then launch the HOME app or recent app dialog.
-		        */
-		        if(win.isDialog()){
-		           win.removeWindowState();
-		        }
+                    /**
+		            * Author: Onskreen
+		            * Date: 31/05/2011
+		            *
+		            * If the dialog is present, first kill/dismiss the dialog
+		            * and then launch the HOME app or recent app dialog.
+		            */
+		            if(win.isDialog()){
+		               win.removeWindowState();
+		            }
 		        
                     mHomePressed = true;
                 } else if (longPress) {
@@ -3442,63 +3395,63 @@ public class PhoneWindowManager implements WindowManagerPolicy {
          */
        if(((attrs.softInputMode & SOFT_INPUT_MASK_ADJUST) == SOFT_INPUT_ADJUST_RESIZE) ||
                win.isObstructedByKeyboard()) {
-           //Indicates the V Keyboard is on the screen, if mContentBottom has been reset
-           //and our desired rect will overlap it
-//           if(desiredRect.bottom > mContentBottom) {
-			if(isKeyboardVisible()) {
-               //If the entire rect is off the screen, it indicates it is not actually visible. This can
-               //be the case for a cornerstone panel when the cornerstone is RUNNING_CLOSED.
-               if(desiredRect.top > mUnrestrictedScreenHeight ||                   //Orientation: Portrait, CS State: Closed
-                       desiredRect.left > mUnrestrictedScreenWidth)   {           //Orientation: Landscape, CS State: Closed
-                   if (DEBUG_LAYOUT) Log.v(TAG, "\tAction: Ignore, win is not visible anyway");
-                   cf.bottom = desiredRect.bottom;
-                   vf.bottom = desiredRect.bottom;
-               } else if(win.isObstructedByKeyboard()) {
-                   //Try to shift the window up on the screen to be fully visible
+            //Indicates the V Keyboard is on the screen, if mContentBottom has been reset
+            //and our desired rect will overlap it
+            //           if(desiredRect.bottom > mContentBottom) {
+            if(isKeyboardVisible()) {
+                //If the entire rect is off the screen, it indicates it is not actually visible. This can
+                //be the case for a cornerstone panel when the cornerstone is RUNNING_CLOSED.
+                if(desiredRect.top > mUnrestrictedScreenHeight ||                   //Orientation: Portrait, CS State: Closed
+                        desiredRect.left > mUnrestrictedScreenWidth)   {           //Orientation: Landscape, CS State: Closed
+                    if (DEBUG_LAYOUT) Log.v(TAG, "\tAction: Ignore, win is not visible anyway");
+                    cf.bottom = desiredRect.bottom;
+                    vf.bottom = desiredRect.bottom;
+                } else if(win.isObstructedByKeyboard()) {
+                    //Try to shift the window up on the screen to be fully visible
 
-                   //Window already shifted
-                   if(mWindowsShifted.contains(win)) {
-                       if (DEBUG_LAYOUT) Log.v(TAG, "\tAction: Win already shifted");
+                    //Window already shifted
+                    if(mWindowsShifted.contains(win)) {
+                        if (DEBUG_LAYOUT) Log.v(TAG, "\tAction: Win already shifted");
 
-                       if(pf.bottom!=mContentBottom) {
-                           int modifiedTop = desiredRect.top - mWindowShiftAmount;
-                           pf.top = df.top = cf.top = vf.top = modifiedTop;
-                           pf.bottom = df.bottom = mContentBottom;
-                           cf.bottom = mContentBottom;
-                           vf.bottom = mCurBottom;
-                       }
-                   } else {
-                       mWindowsShifted.add(win);
-                       mWindowShiftAmount = desiredRect.bottom - mContentBottom;
-                       if (DEBUG_LAYOUT) Log.v(TAG, "\tAction: Shift up " + mWindowShiftAmount + " pixels");
-                       int modifiedTop = desiredRect.top - mWindowShiftAmount;
-                       pf.top = df.top = cf.top = vf.top = modifiedTop;
-                       pf.bottom = df.bottom = mContentBottom;
-                       cf.bottom = mContentBottom;
-                       vf.bottom = mCurBottom;
-                   }
-               } else {
-                   //Squeeze the window in the visible area above the keyboard
-                   if (DEBUG_LAYOUT) Log.v(TAG, "\tAction: Squeeze into visible rect above keyboard");
-                   cf.bottom = mContentBottom;
-                   vf.bottom = mCurBottom;
-               }
-           } else {
-               //Layout as regular
-               if (DEBUG_LAYOUT) Log.v(TAG, "IME: Not Visible\tTask: Unshift Win: " + win);
-               if(mWindowsShifted.contains(win)) {
-                  if (DEBUG_LAYOUT) Log.v(TAG, "\tAction: Shift down " + mWindowShiftAmount + " pixels");
-                  mWindowsShifted.clear();
-                  pf.top = df.top = cf.top = vf.top = desiredRect.top + mWindowShiftAmount;
-                  vf.bottom = cf.bottom = desiredRect.bottom+ mWindowShiftAmount;
-                  pf.bottom = df.bottom = desiredRect.bottom+ mWindowShiftAmount;
-               } else {
-                   if (DEBUG_LAYOUT) Log.v(TAG, "\tAction: Ignore, not currently shifted");
-                   vf.bottom = cf.bottom = desiredRect.bottom;
-                   pf.bottom = df.bottom = desiredRect.bottom;
-               }
-           }
-       }
+                        if(pf.bottom!=mContentBottom) {
+                            int modifiedTop = desiredRect.top - mWindowShiftAmount;
+                            pf.top = df.top = cf.top = vf.top = modifiedTop;
+                            pf.bottom = df.bottom = mContentBottom;
+                            cf.bottom = mContentBottom;
+                            vf.bottom = mCurBottom;
+                        }
+                    } else {
+                        mWindowsShifted.add(win);
+                        mWindowShiftAmount = desiredRect.bottom - mContentBottom;
+                        if (DEBUG_LAYOUT) Log.v(TAG, "\tAction: Shift up " + mWindowShiftAmount + " pixels");
+                        int modifiedTop = desiredRect.top - mWindowShiftAmount;
+                        pf.top = df.top = cf.top = vf.top = modifiedTop;
+                        pf.bottom = df.bottom = mContentBottom;
+                        cf.bottom = mContentBottom;
+                        vf.bottom = mCurBottom;
+                    }
+                } else {
+                    //Squeeze the window in the visible area above the keyboard
+                    if (DEBUG_LAYOUT) Log.v(TAG, "\tAction: Squeeze into visible rect above keyboard");
+                    cf.bottom = mContentBottom;
+                    vf.bottom = mCurBottom;
+                }
+            } else {
+                //Layout as regular
+                if (DEBUG_LAYOUT) Log.v(TAG, "IME: Not Visible\tTask: Unshift Win: " + win);
+                if(mWindowsShifted.contains(win)) {
+                    if (DEBUG_LAYOUT) Log.v(TAG, "\tAction: Shift down " + mWindowShiftAmount + " pixels");
+                    mWindowsShifted.clear();
+                    pf.top = df.top = cf.top = vf.top = desiredRect.top + mWindowShiftAmount;
+                    vf.bottom = cf.bottom = desiredRect.bottom+ mWindowShiftAmount;
+                    pf.bottom = df.bottom = desiredRect.bottom+ mWindowShiftAmount;
+                } else {
+                    if (DEBUG_LAYOUT) Log.v(TAG, "\tAction: Ignore, not currently shifted");
+                    vf.bottom = cf.bottom = desiredRect.bottom;
+                    pf.bottom = df.bottom = desiredRect.bottom;
+                }
+            }
+        }
     }
 
     /** {@inheritDoc} */
@@ -4090,11 +4043,9 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                 if (isMusicActive() && (result & ACTION_PASS_TO_USER) == 0) {
                     if (mVolBtnMusicControls && down && (keyCode != KeyEvent.KEYCODE_VOLUME_MUTE)) {
                         mIsLongPress = false;
-                        handleVolumeLongPress(keyCode);
                         break;
                     } else {
                         if (mVolBtnMusicControls && !down) {
-                            handleVolumeLongPressAbort();
                             if (mIsLongPress) {
                                 break;
                             }
