@@ -14903,7 +14903,7 @@ public final class ActivityManagerService extends ActivityManagerNative
          *
          * Replaced with stack specific logic above.http://bl135w.blu135.mail.live.com/#!/mail/InboxLight.aspx?n=1869400711!n=427194279&fid=1&fav=1&mid=23fb342b-3791-11e1-91a0-00215ad96b8e
          */
-        */if (starting != null) {
+        /**if (starting != null) {
             kept = mMainStack.ensureActivityConfigurationLocked(starting, changes);
             // And we need to make sure at this point that all other activities
             // are made visible with the correct configuration.
