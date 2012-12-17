@@ -3811,6 +3811,7 @@ public final class ActivityManagerService extends ActivityManagerNative
             ActivityStack targetStack = mCornerstonePanelStacks.get(i);
             handleAppDiedLocked(app, restarting, targetStack, allowRestart);
         }
+    }
         
     /**
      * Author: Onskreen
