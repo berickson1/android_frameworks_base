@@ -439,7 +439,32 @@ public class ActiveServices {
 
         ActivityRecord activity = null;
         if (token != null) {
-            activity = mAm.mMainStack.isInStackLocked(token);
+            
+            /**
+			 * Author: Onskreen
+			 * Date: 27/01/2011
+			 *
+			 * Choosing between stacks
+			 */
+            int stack = getActivityStack(token);
+            ActivityStack targetStack = null;
+            //Cornerstone Panel
+            if(stack >= 0) {
+				if(stack < mCornerstonePanelStacks.size()) {
+					targetStack = mCornerstonePanelStacks.get(stack);
+				} else {
+					Log.e(TAG, "Found in Non-Existent Stack");
+					return -1;
+				}
+            } else if(stack == CORNERSTONE_STACK) {
+				//Cornerstone
+				targetStack = mCornerstoneStack;
+            } else if(stack == MAIN_STACK || stack == NO_STACK) {
+				//Main stack or Unknown
+                targetStack = mMainStack;
+            }
+                
+            activity = mAm.targetStack.isInStackLocked(token);
             if (activity == null) {
                 Slog.w(TAG, "Binding with unknown activity: " + token);
                 return 0;
