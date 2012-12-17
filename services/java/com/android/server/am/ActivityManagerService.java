@@ -5303,7 +5303,7 @@ public final class ActivityManagerService extends ActivityManagerNative
                     && processName.equals(hr_c.processName)) {
                 try {
                     if (mHeadless) {
-                        Slog.e(TAG, "Starting activities not supported on headless device: " + hr_c)
+                        Slog.e(TAG, "Starting activities not supported on headless device: " + hr_c);
                     } else if (mCornerstoneStack.realStartActivityLocked(hr_c, app, true, true)) {
                         didSomething = true;
                     }
@@ -5335,7 +5335,7 @@ public final class ActivityManagerService extends ActivityManagerNative
 					&& processName.equals(hr_p.processName)) {
 					try {
 					if (mHeadless) {
-                        Slog.e(TAG, "Starting activities not supported on headless device: " + hr_p)
+                        Slog.e(TAG, "Starting activities not supported on headless device: " + hr_p);
                     } else if (currStack.realStartActivityLocked(hr_p, app, true, true)) {
 							didSomething = true;
 						}
@@ -14818,7 +14818,7 @@ public final class ActivityManagerService extends ActivityManagerNative
             }
         }
         
-        if (changes != 0 /**&& starting == null*//) {\
+        if (changes != 0 /**&& starting == null*/) {
         
             /**
 			 * Author: Onskreen
