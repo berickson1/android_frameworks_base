@@ -3189,6 +3189,7 @@ public class PhoneWindowManager implements WindowManagerPolicy {
 						
                     } else {
                         vf.set(cf);
+                        setWindowInFrame(win, attrs, pf, df, cf, vf);
                     }
                 }
             } else if ((fl & FLAG_LAYOUT_IN_SCREEN) != 0 || (sysUiFl
@@ -3361,6 +3362,83 @@ public class PhoneWindowManager implements WindowManagerPolicy {
         if (DEBUG_LAYOUT) Log.v(TAG, "Input method: mDockBottom="
                 + mDockBottom + " mContentBottom="
                 + mContentBottom + " mCurBottom=" + mCurBottom);
+    }
+    
+        /**
+     * Author: Onskreen
+     * Date: 18/01/2011
+     *
+     * Sets the parent, display, content and visible Rects to the size of WindoState.mFrame rect.
+     */
+    private void setWindowInFrame(WindowState win, WindowManager.LayoutParams attrs, Rect pf, Rect df, Rect cf, Rect vf){
+		if(attrs != null){
+            if(attrs.packageName != null) {
+				Rect desiredRect = win.getFrameLw();
+				//Default is to layout directly in the desired rectangle
+				pf.left = df.left = vf.left = cf.left = desiredRect.left;
+				pf.right = df.right = vf.right = cf.right = desiredRect.right;
+				pf.top = df.top = vf.top = cf.top= desiredRect.top;
+				pf.bottom = df.bottom = desiredRect.bottom;
+
+	          //Only manipulate focused windows
+	            if(win.isFocused()) {
+	                /**
+	                 * Author: Onskreen
+	                 * Date: 16/06/2011
+	                 *
+	                 * Moved the obstructed cs window logic to setObstructedWindowInFrame
+	                 * method.
+	                 */
+	                setObstructedWindowInFrame(win, attrs, pf, df, cf, vf, desiredRect);
+	            } else {
+					//In case window was shifted somehow and then lost focus, make sure it reshifts
+					//where it belongs.
+					if(mWindowsShifted.size() == 0){
+						if(mWindowsShifted.contains(win)) {
+							if (DEBUG_LAYOUT) Log.v(TAG, "\tAction: Shift down " + mWindowShiftAmount + " pixels");
+                           //mWindowsShifted.remove(win);
+                           mWindowsShifted.clear();
+
+                           int modifiedTop = pf.top + mWindowShiftAmount;
+                           pf.top = df.top = cf.top = vf.top = modifiedTop;
+                           vf.bottom = cf.bottom = desiredRect.bottom + modifiedTop;
+						} else {
+							//set the bottom normally
+							vf.bottom = cf.bottom = desiredRect.bottom;
+						}
+		            } else if (mWindowsShifted.contains(win)) {
+						if (DEBUG_LAYOUT) Log.v(TAG, "\tAction: Shift down " + mWindowShiftAmount + " pixels");
+						mWindowsShifted.remove(win);
+						int modifiedTop = pf.top + mWindowShiftAmount;
+						pf.top = df.top = cf.top = vf.top = modifiedTop;
+						vf.bottom = cf.bottom = pf.bottom = df.bottom = desiredRect.bottom + modifiedTop;
+					} else {
+	                    WindowState w = (WindowState) mWindowsShifted.get(0);
+	                    if(w != null) {
+	                        IBinder token = win.getToken();
+	                        boolean isWF = w.isInCornerstonePanelWindowPanel(token);
+	                        if(isWF) {
+	                            setObstructedWindowInFrame(win, attrs, pf, df, cf, vf, desiredRect);
+	                        } else {
+	                            //set the bottom normally
+	                            vf.bottom = cf.bottom = desiredRect.bottom;
+	                        }
+	                    } else {
+	                           //set the bottom normally
+	                           vf.bottom = cf.bottom = desiredRect.bottom;
+	                    }
+	                }
+	            }
+
+               if (DEBUG_LAYOUT) {
+					Log.v(TAG, "Final Rects for Window: " + win);
+					Log.v(TAG, "pf: " + pf);
+					Log.v(TAG, "df: " + df);
+					Log.v(TAG, "cf: " + cf);
+					Log.v(TAG, "vf: " + vf);
+               }
+            }
+		}
     }
     
     /**
