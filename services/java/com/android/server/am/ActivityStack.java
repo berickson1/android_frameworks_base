@@ -65,11 +65,13 @@ import android.view.Display;
 import android.view.WindowManagerPolicy;
 import com.android.internal.app.ActivityTrigger;
 
+/*Cornerstone Imports*/
 import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import com.android.server.wm.WindowManagerService;
 
 /**
  * State and management of a single stack of activities.
@@ -469,8 +471,15 @@ final class ActivityStack {
             }
         }
     };
-    
-    ActivityStack(ActivityManagerService service, Context context, boolean mainStack) {
+    /**
+     * Author: Onskreen
+     * Date: 24/01/2011
+     *
+     * Add cornerstone arguments
+     */
+    ActivityStack(ActivityManagerService service, Context context, boolean mainStack,
+            boolean cornerstonePanelStack,
+	    	int cornerstonePanelIndex) {
         mService = service;
         mContext = context;
         mMainStack = mainStack;
@@ -1971,9 +1980,7 @@ final class ActivityStack {
             boolean updated = false;
             if (mMainStack) {
                 synchronized (mService) {
-                    //Configuration config = mService.mWindowManager.updateOrientationFromAppTokens(
-                    //        mService.mConfiguration,
-                    //        next.mayFreezeScreenLocked(next.app) ? next.appToken : null);
+
                     /**
 					* Author: Onskreen
 					* Date : 26/12/2011
@@ -1988,6 +1995,9 @@ final class ActivityStack {
 					} else if(mCornerstoneStack) {
 						conf = WindowManagerService.WP_Panel.CORNERSTONE;
 					}
+					Configuration config = mService.mWindowManager.updateOrientationFromAppTokens(
+                            mService.mConfiguration,
+                            next.mayFreezeScreenLocked(next.app) ? next.appToken : null);
                     if (config != null) {
                         next.frozenBeforeDestroy = true;
                     }
@@ -3478,7 +3488,7 @@ final class ActivityStack {
         if(!okToProceed) {
 			//This isn't a success, but is not a failure of the calling activity,
 			// so return success and let things proceed.
-			return IActivityManager.START_SUCCESS;
+			return ActivityManager.START_SUCCESS;
         }
 
         synchronized (mService) {

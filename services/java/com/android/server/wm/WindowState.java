@@ -62,7 +62,15 @@ final class WindowState implements WindowManagerPolicy.WindowState {
     static final boolean SHOW_TRANSACTIONS = WindowManagerService.SHOW_TRANSACTIONS;
     static final boolean SHOW_LIGHT_TRANSACTIONS = WindowManagerService.SHOW_LIGHT_TRANSACTIONS;
     static final boolean SHOW_SURFACE_ALLOC = WindowManagerService.SHOW_SURFACE_ALLOC;
-
+    
+    /**
+     * Author: Onskreen
+     * Date: 12/01/2011
+     *
+     * Cornerstone debugging flag
+     */
+    static final boolean DEBUG_CORNERSTONE = WindowManagerService.DEBUG_CORNERSTONE;
+    
     final WindowManagerService mService;
     final WindowManagerPolicy mPolicy;
     final Context mContext;

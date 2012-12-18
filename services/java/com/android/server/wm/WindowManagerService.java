@@ -170,6 +170,10 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 
+/* Cornerstone Imports*/
+import org.xmlpull.v1.XmlPullParser;
+import org.xmlpull.v1.XmlPullParserException;
+
 /** {@hide} */
 public class WindowManagerService extends IWindowManager.Stub
         implements Watchdog.Monitor, WindowManagerPolicy.WindowManagerFuncs,
@@ -1696,8 +1700,8 @@ public class WindowManagerService extends IWindowManager.Stub
      */
     public void logQuickWMSState() {
         // dump the WMS data
-        for (int i = 0; i < mWindows.size(); i++) {
-            WindowState win = (WindowState) mWindows.get(i);
+        for (int i = 0; i < windows.size(); i++) {
+            WindowState win = (WindowState) windows.get(i);
             if (win.mAppToken != null) {
                 Log.v(TAG, i + ". " + win);
 
@@ -1726,8 +1730,8 @@ public class WindowManagerService extends IWindowManager.Stub
      */
     public void logWMSState(boolean logAppTokenDetail, boolean ignoreNonAppTokens) {
         // dump the WMS data
-        for (int i = 0; i < mWindows.size(); i++) {
-            WindowState win = (WindowState) mWindows.get(i);
+        for (int i = 0; i < windows.size(); i++) {
+            WindowState win = (WindowState) windows.get(i);
             if (win.mAppToken == null && ignoreNonAppTokens) {
                 Log.v(TAG, i + ". " + win + " Ignored (non-apptoken)");
             } else {

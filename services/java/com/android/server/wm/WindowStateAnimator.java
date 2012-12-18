@@ -54,6 +54,14 @@ class WindowStateAnimator {
     static final boolean localLOGV = WindowManagerService.localLOGV;
     static final boolean DEBUG_ORIENTATION = WindowManagerService.DEBUG_ORIENTATION;
     static final boolean DEBUG_SURFACE_TRACE = WindowManagerService.DEBUG_SURFACE_TRACE;
+    
+    /**
+     * Author: Onskreen
+     * Date: 12/01/2011
+     *
+     * Cornerstone debugging flag
+     */
+    static final boolean DEBUG_CORNERSTONE = WindowManagerService.DEBUG_CORNERSTONE;
 
     static final String TAG = "WindowStateAnimator";
 

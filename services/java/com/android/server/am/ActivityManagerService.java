@@ -165,6 +165,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import dalvik.system.Zygote;
 
+/*Cornerstone additions */
+import com.android.server.wm.WindowManagerService.Cornerstone_State;
+import org.xmlpull.v1.XmlPullParser;
+import org.xmlpull.v1.XmlPullParserException;
+import android.app.ICornerstoneManager;
+import android.content.res.Resources;
+import android.content.res.XmlResourceParser;
+
 public final class ActivityManagerService extends ActivityManagerNative
         implements Watchdog.Monitor, BatteryStatsImpl.BatteryCallback {
     private static final String USER_DATA_DIR = "/data/user/";
@@ -172,6 +180,15 @@ public final class ActivityManagerService extends ActivityManagerNative
     static final String TAG_MU = "ActivityManagerServiceMU";
     static final boolean DEBUG = false;
     static final boolean localLOGV = DEBUG;
+    
+    /**
+     * Author: Onskreen
+     * Date: 12/01/2011
+     *
+     * Cornerstone debugging flag
+     */
+    static final boolean DEBUG_CORNERSTONE = localLOGV || false;
+    
     static final boolean DEBUG_SWITCH = localLOGV || false;
     static final boolean DEBUG_TASKS = localLOGV || false;
     static final boolean DEBUG_THUMBNAILS = localLOGV || false;
@@ -852,6 +869,22 @@ public final class ActivityManagerService extends ActivityManagerNative
         int importance;
         boolean foregroundActivities;
     }
+    
+    /**
+    * Author: Onskreen
+    * Date: 28/02/2011
+    *
+    * ICornerstoneManager object
+    */
+    ICornerstoneManager mCornerstoneManager = null;
+
+   /**
+    * Author: Onskreen
+    * Date: 16/07/2011
+    *
+    * Activity stack kill setting Flag
+    */
+    boolean mActivityStackExiting;
 
     final RemoteCallbackList<IProcessObserver> mProcessObservers
             = new RemoteCallbackList<IProcessObserver>();
@@ -7489,44 +7522,6 @@ public final class ActivityManagerService extends ActivityManagerNative
         }
         return false;
     }
-    
-    private final int findAffinityTaskTopLocked(int startIndex, String affinity) {
-        int j;
-        TaskRecord startTask = ((ActivityRecord)mMainStack.mHistory.get(startIndex)).task; 
-        TaskRecord jt = startTask;
-        
-        // First look backwards
-        for (j=startIndex-1; j>=0; j--) {
-            ActivityRecord r = (ActivityRecord)mMainStack.mHistory.get(j);
-            if (r.task != jt) {
-                jt = r.task;
-                if (affinity.equals(jt.affinity)) {
-                    return j;
-                }
-            }
-        }
-        
-        // Now look forwards
-        final int N = mMainStack.mHistory.size();
-        jt = startTask;
-        for (j=startIndex+1; j<N; j++) {
-            ActivityRecord r = (ActivityRecord)mMainStack.mHistory.get(j);
-            if (r.task != jt) {
-                if (affinity.equals(jt.affinity)) {
-                    return j;
-                }
-                jt = r.task;
-            }
-        }
-        
-        // Might it be at the top?
-        if (affinity.equals(((ActivityRecord)mMainStack.mHistory.get(N-1)).task.affinity)) {
-            return N-1;
-        }
-        
-        return -1;
-    }
-    
     /**
 	 * Author: Onskreen
 	 * Date: 27/01/2011
@@ -7537,7 +7532,7 @@ public final class ActivityManagerService extends ActivityManagerNative
         int j;
         TaskRecord startTask = ((ActivityRecord)mMainStack.mHistory.get(startIndex)).task; 
         TaskRecord jt = startTask;
-
+        
         // First look backwards
         for (j=startIndex-1; j>=0; j--) {
             ActivityRecord r = (ActivityRecord)mMainStack.mHistory.get(j);
@@ -7548,7 +7543,7 @@ public final class ActivityManagerService extends ActivityManagerNative
                 }
             }
         }
-
+        
         // Now look forwards
         final int N = mMainStack.mHistory.size();
         jt = startTask;
@@ -7561,16 +7556,17 @@ public final class ActivityManagerService extends ActivityManagerNative
                 jt = r.task;
             }
         }
-
+        
         // Might it be at the top?
         if (affinity.equals(((ActivityRecord)mMainStack.mHistory.get(N-1)).task.affinity)) {
             return N-1;
         }
-
+        
         return -1;
     }
-
-	/**
+    
+    
+    /**
 	 * Author: Onskreen
 	 * Data: 21/02/2010
 	 *
