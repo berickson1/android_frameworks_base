@@ -173,6 +173,10 @@ import java.util.NoSuchElementException;
 /* Cornerstone Imports*/
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
+import android.content.res.Resources;
+import android.content.res.XmlResourceParser;
+import java.util.Locale;
+import android.util.LocaleUtil;
 
 /** {@hide} */
 public class WindowManagerService extends IWindowManager.Stub
@@ -1698,7 +1702,8 @@ public class WindowManagerService extends IWindowManager.Stub
      * Utility method to dump quick status of app windows. For debugging.
      * Ignores non-app windows.
      */
-    public void logQuickWMSState() {
+    public void logQuickWMSState(WindowState win) {
+        final WindowList windows = win.getWindowList();
         // dump the WMS data
         for (int i = 0; i < windows.size(); i++) {
             WindowState win = (WindowState) windows.get(i);
@@ -1728,7 +1733,8 @@ public class WindowManagerService extends IWindowManager.Stub
      *
      * Utility method to dump relevant window output to log. For debugging.
      */
-    public void logWMSState(boolean logAppTokenDetail, boolean ignoreNonAppTokens) {
+    public void logWMSState(WindowState win, boolean logAppTokenDetail, boolean ignoreNonAppTokens) {
+        final WindowList windows = win.getWindowList();
         // dump the WMS data
         for (int i = 0; i < windows.size(); i++) {
             WindowState win = (WindowState) windows.get(i);
@@ -3288,7 +3294,7 @@ public class WindowManagerService extends IWindowManager.Stub
                             if (DEBUG_CONFIGURATION) {
                                 Slog.i(TAG, "Window " + win + " visible with new config: "
                                         + win.mConfiguration + " / 0x"
-                                        + Integer.toHexString(diff));
+                                        /*+ Integer.toHexString(diff)*/);
                             }
                             outConfig.setTo(mCurConfiguration);
                         }
@@ -3958,13 +3964,13 @@ public class WindowManagerService extends IWindowManager.Stub
                 boolean isMainPanel = false;
                 boolean isCSPanel0 = false;
                 boolean isCSPanel1 = false;
-                if(wtoken == null) {
+                if(atoken == null) {
 					isMainPanel = true;
                 } else {
-	                WindowPanel wp = findWindowPanel(wtoken.groupId);
+	                WindowPanel wp = findWindowPanel(atoken.groupId);
 	                if(wp==null) {
 						isMainPanel = true;		//When all else fails, just act as if main panel
-						if (DEBUG_CORNERSTONE) Log.v(TAG, "Failed to find WindowPanel containing token: " + wtoken);
+						if (DEBUG_CORNERSTONE) Log.v(TAG, "Failed to find WindowPanel containing token: " + atoken);
 					} else if(wp.isMainPanel()) {
 						isMainPanel = true;
 					} else if(wp.isCornerstone()) {
@@ -8401,7 +8407,7 @@ public class WindowManagerService extends IWindowManager.Stub
             for(WindowPanel wp: mWindowPanels) {
                 wp.setFrame(computeWindowPanelRect(wp, mCurConfiguration.orientation, mCornerstoneState));
             }
-            mLayoutNeeded=true;
+            getDefaultDisplayContentLocked().layoutNeeded = true;
             performLayoutAndPlaceSurfacesLocked();
         }
 
@@ -8454,7 +8460,7 @@ public class WindowManagerService extends IWindowManager.Stub
            for(WindowPanel wp: mWindowPanels) {
                wp.setFrame(computeWindowPanelRect(wp, mCurConfiguration.orientation, mCornerstoneState));
            }
-           mLayoutNeeded=true;
+           getDefaultDisplayContentLocked().layoutNeeded = true;
            performLayoutAndPlaceSurfacesLocked();
        }
 
@@ -8732,7 +8738,7 @@ public class WindowManagerService extends IWindowManager.Stub
                          * to the screen asap, hopefully so that it does not display on top of the cornerstone at
                          * any time.
                          */
-                        mLayoutNeeded=true;
+                        getDefaultDisplayContentLocked().layoutNeeded = true;
                         performLayoutAndPlaceSurfacesLocked();
                 } catch (RemoteException e) {
                     e.printStackTrace();
